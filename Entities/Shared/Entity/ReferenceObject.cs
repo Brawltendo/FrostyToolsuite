@@ -19,10 +19,12 @@ using LevelEditorPlugin.Converters;
 using Asset = LevelEditorPlugin.Assets.Asset;
 using ObjectBlueprint = LevelEditorPlugin.Assets.ObjectBlueprint;
 using PrefabBlueprint = LevelEditorPlugin.Assets.PrefabBlueprint;
+using LevelEditorPlugin.Attributes;
 
 namespace LevelEditorPlugin.Entities
 {
     [EntityBinding(DataType = typeof(FrostySdk.Ebx.ReferenceObjectData))]
+    [NodeColor(255, 0, 81, 24)]
     public class ReferenceObject : Entity, ISpatialReferenceEntity, ILogicEntity
     {
         public FrostySdk.Ebx.ReferenceObjectData Data => data as FrostySdk.Ebx.ReferenceObjectData;

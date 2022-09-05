@@ -196,9 +196,9 @@ namespace LevelEditorPlugin.Controls
                 state.NodeBackgroundBrush = new SolidColorBrush(Color.FromRgb(194, 194, 194));
                 state.NodeCollapseButtonBackgroundBrush = new SolidColorBrush(Color.FromRgb(248, 248, 248));
                 
-                state.SchematicLinkBrush = new SolidColorBrush(Color.FromArgb(0xff, 0x6f, 0xa9, 0xce));
-                state.SchematicEventBrush = new SolidColorBrush(Color.FromArgb(0xff, 0xf8, 0xf8, 0xf8));
-                state.SchematicPropertyBrush = new SolidColorBrush(Color.FromArgb(0xff, 0x5f, 0xd9, 0x5f));
+                state.SchematicLinkBrush = new SolidColorBrush(Color.FromArgb(0xff, 0x58, 0xb6, 0xeb));
+                state.SchematicEventBrush = new SolidColorBrush(Color.FromArgb(0xff, 0xff, 0xff, 0xff));
+                state.SchematicPropertyBrush = new SolidColorBrush(Color.FromArgb(0xff, 0x57, 0xd9, 0x53));
                 state.SchematicRealmEnabled = new SolidColorBrush(Color.FromRgb(255, 255, 0));
                 state.SchematicRealmDisabled = new SolidColorBrush(Color.FromArgb(77, 255, 255, 255));
 

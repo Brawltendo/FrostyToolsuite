@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using LevelEditorPlugin.Attributes;
 using LevelEditorPlugin.Entities;
 using LevelEditorPlugin.Library.Drawing;
 using LevelEditorPlugin.Library.Reflection;
@@ -36,6 +38,10 @@ namespace LevelEditorPlugin.Controls
         public ContextMenu NodeContextMenu;
         public ContextMenu PortContextMenu;
 
+        // node brushes
+        private static readonly Brush m_nodeHeaderDefaultBrush = StaticBrushes.GetBrush(255, 63, 63, 63);
+        private Brush m_nodeHeaderBrush = m_nodeHeaderDefaultBrush;
+
         public NodeVisual(ILogicEntity entity, double x, double y)
             : base(x, y)
         {
@@ -47,6 +53,13 @@ namespace LevelEditorPlugin.Controls
 
             // main connector
             Self = new Port(this) { Name = "", NameHash = 0, Rect = new Rect(-6, 4, 12, 12), PortType = 0, PortDirection = 1, DataType = Entity.GetType() };
+
+            // get node color attribute
+            NodeColorAttribute colorAttr = Entity.GetType().GetCustomAttribute<NodeColorAttribute>();
+            if (colorAttr != null)
+            {
+                m_nodeHeaderBrush = StaticBrushes.GetBrush(colorAttr.ColorCode);
+            }
         }
 
         public override bool OnMouseOver(Point mousePos)
@@ -613,7 +626,7 @@ namespace LevelEditorPlugin.Controls
             Size nodeSize = Rect.Size;
 
             // title background
-            state.DrawingContext.DrawRoundedRectangle(state.NodeTitleBackgroundBrush, null, new Rect(nodePosition.X, nodePosition.Y, Rect.Width * state.Scale, headerHeight * state.Scale), new CornerRadius(2 * state.Scale, 2 * state.Scale, 0, 0));
+            state.DrawingContext.DrawRoundedRectangle(m_nodeHeaderBrush, null, new Rect(nodePosition.X, nodePosition.Y, Rect.Width * state.Scale, headerHeight * state.Scale), new CornerRadius(2 * state.Scale, 2 * state.Scale, 0, 0));
 
             if (state.InvScale >= 5)
             {
@@ -621,8 +634,8 @@ namespace LevelEditorPlugin.Controls
             }
 
             // self connector
-            Brush brush = (Self.IsHighlighted) ? state.NodeSelectedBrush : state.SchematicLinkBrush;
-            Self.Draw(state, brush, state.NodeTitleBackgroundBrush, nodePosition);
+            Brush brush = Self.IsHighlighted || (Self.IsConnected && IsSelected) ? state.WireSelectedPen.Brush : state.SchematicLinkBrush;
+            Self.Draw(state, brush, m_nodeHeaderBrush, nodePosition);
             if (Self.IsHighlighted)
                 DrawTooltip(state, Self);
 
