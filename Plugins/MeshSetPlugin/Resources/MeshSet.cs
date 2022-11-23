@@ -554,7 +554,8 @@ namespace MeshSetPlugin.Resources
             long boneListOffset = 0;
             uint boneCount = 0;
 
-            if (ProfilesLibrary.IsLoaded(ProfileVersion.Madden22, ProfileVersion.Fifa22, ProfileVersion.Battlefield2042,
+            if (ProfilesLibrary.IsLoaded(ProfileVersion.Madden22, ProfileVersion.NeedForSpeedUnbound, 
+                ProfileVersion.Fifa22, ProfileVersion.Battlefield2042,
                 ProfileVersion.Madden23))
             {
                 boneListOffset = reader.ReadLong();
@@ -576,7 +577,7 @@ namespace MeshSetPlugin.Resources
 
                 m_unk2 = reader.ReadUInt();
 
-                if (ProfilesLibrary.IsLoaded(ProfileVersion.Battlefield2042))
+                if (ProfilesLibrary.IsLoaded(ProfileVersion.NeedForSpeedUnbound, ProfileVersion.Battlefield2042))
                 {
                     reader.ReadLong();
                 }
@@ -748,7 +749,8 @@ namespace MeshSetPlugin.Resources
             {
                 reader.Pad(16);
             }
-            else if (ProfilesLibrary.IsLoaded(ProfileVersion.Madden22, ProfileVersion.Fifa22, ProfileVersion.Battlefield2042, ProfileVersion.Madden23))
+            else if (ProfilesLibrary.IsLoaded(ProfileVersion.Madden22, ProfileVersion.NeedForSpeedUnbound, 
+                ProfileVersion.Fifa22, ProfileVersion.Battlefield2042, ProfileVersion.Madden23))
             {
                 reader.ReadLong(); // some hash
 
@@ -756,7 +758,8 @@ namespace MeshSetPlugin.Resources
                 {
                     reader.ReadLong(); // some other hash
                 }
-                else if (ProfilesLibrary.IsLoaded(ProfileVersion.Madden22, ProfileVersion.Battlefield2042, ProfileVersion.Madden23))
+                else if (ProfilesLibrary.IsLoaded(ProfileVersion.Madden22, ProfileVersion.NeedForSpeedUnbound, 
+                    ProfileVersion.Battlefield2042, ProfileVersion.Madden23))
                 {
                     reader.ReadUInt(); // some other hash
                 }
@@ -879,7 +882,8 @@ namespace MeshSetPlugin.Resources
 
             meshContainer.WriteRelocPtr("STR", m_sectionIndex + ":" + m_materialName, writer);
 
-            if (ProfilesLibrary.IsLoaded(ProfileVersion.Madden22, ProfileVersion.Fifa22, ProfileVersion.Battlefield2042,
+            if (ProfilesLibrary.IsLoaded(ProfileVersion.Madden22, ProfileVersion.NeedForSpeedUnbound, 
+                ProfileVersion.Fifa22, ProfileVersion.Battlefield2042,
                 ProfileVersion.Madden23))
             {
                 if (m_boneList.Count > 0)
@@ -1057,18 +1061,23 @@ namespace MeshSetPlugin.Resources
             {
                 writer.WritePadding(16);
             }
-            else if (ProfilesLibrary.IsLoaded(ProfileVersion.Madden22, ProfileVersion.Fifa22, ProfileVersion.Battlefield2042, ProfileVersion.Madden23))
+            else if (ProfilesLibrary.IsLoaded(ProfileVersion.Madden22, ProfileVersion.NeedForSpeedUnbound, 
+                ProfileVersion.Fifa22, ProfileVersion.Battlefield2042, ProfileVersion.Madden23))
             {
                 // @todo
                 // some hash
+                writer.Write(0UL);
 
                 if (ProfilesLibrary.IsLoaded(ProfileVersion.Fifa22))
                 {
                     // some other hash
+                    writer.Write(0UL);
                 }
-                else if (ProfilesLibrary.IsLoaded(ProfileVersion.Madden22, ProfileVersion.Battlefield2042, ProfileVersion.Madden23))
+                else if (ProfilesLibrary.IsLoaded(ProfileVersion.Madden22, ProfileVersion.NeedForSpeedUnbound, 
+                    ProfileVersion.Battlefield2042, ProfileVersion.Madden23))
                 {
                     // some other hash
+                    writer.Write(0U);
                 }
 
                 writer.WritePadding(16);
@@ -1295,7 +1304,7 @@ namespace MeshSetPlugin.Resources
                 m_adjacencyData = new byte[m_adjacencyBufferSize];
             }
 
-            if (ProfilesLibrary.IsLoaded(ProfileVersion.Battlefield2042))
+            if (ProfilesLibrary.IsLoaded(ProfileVersion.NeedForSpeedUnbound, ProfileVersion.Battlefield2042))
             {
                 reader.ReadLong();
             }
@@ -1691,6 +1700,13 @@ namespace MeshSetPlugin.Resources
                 writer.Write(m_adjacencyData.Length);
             }
 
+            if (ProfilesLibrary.IsLoaded(ProfileVersion.NeedForSpeedUnbound, ProfileVersion.Battlefield2042))
+            {
+                // @todo
+                // unknown value
+                writer.Write(0UL);
+            }
+
             writer.Write(m_chunkId);
             writer.Write(m_inlineDataOffset);
 
@@ -1826,6 +1842,7 @@ namespace MeshSetPlugin.Resources
                     case (int)ProfileVersion.PlantsVsZombiesBattleforNeighborville:
                     case (int)ProfileVersion.StarWarsBattlefrontII:
                     case (int)ProfileVersion.StarWarsSquadrons:
+                    case (int)ProfileVersion.NeedForSpeedUnbound:
                     case (int)ProfileVersion.Battlefield2042:
                         return true;
                     default:
@@ -1885,7 +1902,7 @@ namespace MeshSetPlugin.Resources
             m_nameHash = reader.ReadUInt();
             m_meshType = (MeshType)reader.ReadUInt();
 
-            if (ProfilesLibrary.IsLoaded(ProfileVersion.Battlefield2042))
+            if (ProfilesLibrary.IsLoaded(ProfileVersion.NeedForSpeedUnbound, ProfileVersion.Battlefield2042))
             {
                 m_meshType = (MeshType)((uint)m_meshType & 0xFF);
                 // unk
@@ -1940,7 +1957,8 @@ namespace MeshSetPlugin.Resources
             ushort lodCount = reader.ReadUShort();
             ushort sectionCount = reader.ReadUShort();
 
-            if (ProfilesLibrary.IsLoaded(ProfileVersion.Madden22, ProfileVersion.Battlefield2042, ProfileVersion.Madden23))
+            if (ProfilesLibrary.IsLoaded(ProfileVersion.Madden22, ProfileVersion.NeedForSpeedUnbound, 
+                ProfileVersion.Battlefield2042, ProfileVersion.Madden23))
             {
                 ushort unk1 = reader.ReadUShort();
                 ushort unk2 = reader.ReadUShort();

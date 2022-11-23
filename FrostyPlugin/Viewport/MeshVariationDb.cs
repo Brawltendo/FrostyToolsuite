@@ -29,7 +29,7 @@ namespace Frosty.Core.Viewport
             if (!ProfilesLibrary.IsLoaded(ProfileVersion.Battlefield1, ProfileVersion.Anthem,
                 ProfileVersion.Battlefield5, ProfileVersion.Fifa20,
                 ProfileVersion.PlantsVsZombiesBattleforNeighborville, ProfileVersion.NeedForSpeedHeat,
-                ProfileVersion.Fifa21, ProfileVersion.Madden22,
+                ProfileVersion.Fifa21, ProfileVersion.Madden22, ProfileVersion.NeedForSpeedUnbound,
                 ProfileVersion.Fifa22, ProfileVersion.Battlefield2042,
                 ProfileVersion.Madden23))
             {
@@ -136,7 +136,7 @@ namespace Frosty.Core.Viewport
             if (ProfilesLibrary.IsLoaded(ProfileVersion.Fifa19 , ProfileVersion.Madden20,
                 ProfileVersion.Fifa20, ProfileVersion.PlantsVsZombiesBattleforNeighborville,
                 ProfileVersion.NeedForSpeedHeat,
-                ProfileVersion.Fifa21, ProfileVersion.Madden22,
+                ProfileVersion.Fifa21, ProfileVersion.Madden22, ProfileVersion.NeedForSpeedUnbound,
                 ProfileVersion.Fifa22, ProfileVersion.Battlefield2042,
                 ProfileVersion.Madden23))
             {

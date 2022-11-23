@@ -1135,6 +1135,34 @@ namespace FrostyCmd
                 blobs.Add(key, writer.ToByteArray());
             }
         }
+
+		private void CreateNeedForSpeedUnboundProfile()
+        {
+            string key = "NeedForSpeedUnbound";
+            using (NativeWriter writer = new NativeWriter(new MemoryStream()))
+            {
+                writer.WriteObfuscatedString("Need for Speed™ Unbound");
+                writer.Write((int)(int)ProfileVersion.NeedForSpeedUnbound);
+                writer.WriteObfuscatedString("NFSUnbound");
+                writer.WriteObfuscatedString(typeof(NullDeobfuscator).Name);
+                writer.WriteObfuscatedString(AssetManager.GetLoaderName("CasAssetLoader"));
+                writer.Write(CreateSources("Patch;false", "Data;false"));
+                writer.WriteObfuscatedString("NFSUnboundSDK");
+                writer.Write(CreateBanner("NFSUnbound"));
+                writer.WriteObfuscatedString("Shaders/GenericTextures/ut_defaultwhite_d");
+                writer.WriteObfuscatedString("Shaders/GenericTextures/UT_Default_N");
+                writer.WriteObfuscatedString("Shaders/GenericTextures/UT_defaultBlack_D");
+                writer.WriteObfuscatedString("Shaders/GenericTextures/ut_defaultwhite_d");
+                writer.Write(0); // shared bundle names
+                writer.Write(0); // ignored res types
+
+                // Flags (MustAddChunks, EbxVersion, RequiresKey, ReadOnly, EAC)
+                ProfileFlags pf = new ProfileFlags(0, 6, 1, 1, 0);
+                pf.Write(writer);
+
+                blobs.Add(key, writer.ToByteArray());
+            }
+        }
 #endregion
         
         public ProfileCreator()
@@ -1174,6 +1202,7 @@ namespace FrostyCmd
             CreateFifa21Profile();
             CreateFifa22Profile();
             CreateBF2042Profile();
+            CreateNeedForSpeedUnboundProfile();
             CreateMadden22Profile();
             CreateMadden23Profile();
 

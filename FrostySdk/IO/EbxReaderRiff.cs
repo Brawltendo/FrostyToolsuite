@@ -21,7 +21,7 @@ namespace FrostySdk.IO
         public EbxReaderRiff(Stream InStream, FileSystemManager fs, bool inPatched)
             : base(InStream, true)
         {
-            if (std == null)
+            if (std == null && fs != null && fs.HasFileInMemoryFs("SharedTypeDescriptors.ebx"))
             {
                 std = new EbxSharedTypeDescriptors(fs, "SharedTypeDescriptors.ebx");
                 if (fs.HasFileInMemoryFs("SharedTypeDescriptors_patch.ebx"))
@@ -36,22 +36,24 @@ namespace FrostySdk.IO
             // RIFF
             magic = (EbxVersion)ReadUInt();
             if (magic != EbxVersion.Version6)
+            {
                 throw new InvalidDataException("Ebx not in RIFF format."); // RIFX and LIST
+            }
             uint size = ReadUInt();
 
             // EBX
             uint ebxHeader = ReadUInt(Endian.Big);
             if (ebxHeader != 0x45425800 && ebxHeader != 0x45425853) // EBXS ????
+            {
                 throw new InvalidDataException("Not valid EBX/EBXS.");
+            }
 
             // EBXD
             if (ReadUInt(Endian.Big) != 0x45425844)
             {
                 throw new InvalidDataException("Not valid EBXD chunk.");
             }
-
             uint ebxdSize = ReadUInt();
-
             long ebxdOffset = Position;
 
             Pad(16);
@@ -64,9 +66,10 @@ namespace FrostySdk.IO
 
             // EFIX
             if (ReadUInt(Endian.Big) != 0x45464958)
+            {
                 throw new InvalidDataException("Not valid EFIX chunk.");
+            }
             uint efixSize = ReadUInt();
-
             long efixOffset = Position;
 
             fileGuid = ReadGuid();
@@ -82,15 +85,18 @@ namespace FrostySdk.IO
             for (int i = 0; i < signatureCount; i++)
             {
                 byte[] signature = ReadBytes(4);
-                Guid classGuid = classGuids[i];
-                byte[] classGuidBytes = classGuid.ToByteArray();
+                //if (!ProfilesLibrary.IsLoaded(ProfileVersion.NeedForSpeedUnbound))
+                {
+                    Guid classGuid = classGuids[i];
+                    byte[] classGuidBytes = classGuid.ToByteArray();
 
-                byte[] typeInfoGuidByteArray = new byte[16];
-                Array.Copy(classGuidBytes, 4, typeInfoGuidByteArray, 0, 12);
-                Array.Copy(signature, 0, typeInfoGuidByteArray, 12, 4);
+                    byte[] typeInfoGuidByteArray = new byte[16];
+                    Array.Copy(classGuidBytes, 4, typeInfoGuidByteArray, 0, 12);
+                    Array.Copy(signature, 0, typeInfoGuidByteArray, 12, 4);
 
-                Guid typeInfoGuid = new Guid(typeInfoGuidByteArray);
-                classGuids[i] = typeInfoGuid;
+                    Guid typeInfoGuid = new Guid(typeInfoGuidByteArray);
+                    classGuids[i] = typeInfoGuid;
+                }
             }
 
             uint toRemove = classGuidCount - signatureCount;
@@ -172,8 +178,11 @@ namespace FrostySdk.IO
 
             // EBXX
             if (ReadUInt(Endian.Big) != 0x45425858)
+            {
                 throw new InvalidDataException("Not valid EBXX chunk.");
+            }
             uint ebxxSize = ReadUInt();
+            long ebxxOffset = Position;
             arrayCount = ReadUInt();
             boxedValuesCount = ReadUInt();
 
@@ -214,12 +223,93 @@ namespace FrostySdk.IO
                 );
             }
 
+            // return early if game has SharedTypeDescriptors
+            // games without it will have reflection data stored directly in the EBX instead
+            if (std != null)
+            {
+                Position = dataStartOffset;
+                return;
+            }
+
+            if (Position != ebxxOffset + ebxxSize)
+            {
+                Position = ebxxOffset + ebxxSize;
+            }
+
+            // REFL
+            if (ReadUInt(Endian.Big) != 0x5245464C)
+            {
+                throw new InvalidDataException("Not valid REFL chunk.");
+            }
+            uint reflSize = ReadUInt();
+
+            uint numTypes = ReadUInt();
+            classGuids.Clear();
+            for (int i = 0; i < numTypes; i++)
+            {
+                classGuids.Add(ReadGuid());
+                ReadUInt();
+            }
+
+            // skip ahead to string table
+            uint numDescriptors = ReadUInt();
+            long descriptorsPos = Position;
+            Position += numDescriptors * 16;
+            uint numFields = ReadUInt();
+            long fieldsPos = Position;
+            Position += numFields * 12;
+
+            // don't know if these are important yet, doesn't seem like it though
+            uint unkStructCount0 = ReadUInt();
+            Position += unkStructCount0 * 12;
+            uint unkStructCount1 = ReadUInt();
+            Position += unkStructCount1 * 8;
+            long stringTablePos = Position;
+
+            Position = descriptorsPos;
+            for (int i = 0; i < numDescriptors; i++)
+            {
+                EbxClass classType = new EbxClass();
+
+                uint nameOffset = ReadUInt();
+                classType.FieldIndex = (int)ReadUInt();
+                classType.FieldCount = ReadUShort();
+                classType.Type = (ushort)(ReadUShort() >> 1);
+                classType.Size = ReadUShort();
+                classType.Alignment = (byte)ReadUShort();
+                classType.SecondSize = 0;
+
+                long curPos = Position;
+                Position = stringTablePos + nameOffset;
+                classType.Name = ReadNullTerminatedString();
+                Position = curPos;
+                ClassTypes.Add(classType);
+            }
+
+            Position = fieldsPos;
+            for (int i = 0; i < numFields; i++)
+            {
+                EbxField fieldType = new EbxField();
+
+                uint nameOffset = ReadUInt();
+                fieldType.DataOffset = ReadUInt();
+                fieldType.Type = (ushort)(ReadUShort() >> 1);
+                fieldType.ClassRef = ReadUShort();
+                fieldType.SecondOffset = 0;
+
+                long curPos = Position;
+                Position = stringTablePos + nameOffset;
+                fieldType.Name = ReadNullTerminatedString();
+                Position = curPos;
+                fieldTypes.Add(fieldType);
+            }
+
             Position = dataStartOffset;
         }
 
         internal override void InternalReadObjects()
         {
-            EbxClass c = std.GetClass(classGuids[0]).Value;
+            //EbxClass c = std.GetClass(classGuids[0]).Value;
             foreach (EbxInstance inst in instances)
             {
                 Type objType = TypeLibrary.GetType(classGuids[inst.ClassRef]);
@@ -240,8 +330,18 @@ namespace FrostySdk.IO
                 for (int j = 0; j < inst.Count; j++)
                 {
                     dynamic obj = objects[typeId++];
-                    Type objType = obj.GetType();
-                    EbxClass classType = GetClass(objType);
+
+                    EbxClass classType;
+                    if (std != null)
+                    {
+                        Type objType = obj.GetType();
+                        classType = GetClass(objType);
+                    }
+                    else
+                    {
+                        // need to use this when the EBX contains reflection data
+                        classType = ClassTypes[inst.ClassRef];
+                    }
 
                     Pad(classType.Alignment);
 
@@ -265,6 +365,18 @@ namespace FrostySdk.IO
         internal override EbxClass GetClass(EbxClass? classType, int index)
         {
             EbxClass? newClassType = null;
+
+            // for games without SharedTypeDescriptors
+            if (std == null)
+            {
+                newClassType = ClassTypes[index];
+                if (newClassType.HasValue)
+                {
+                    TypeLibrary.AddType(newClassType.Value.Name);
+                }
+                return newClassType.Value;
+            }
+
             Guid? guid = null;
 
             if (!classType.HasValue)
@@ -316,8 +428,19 @@ namespace FrostySdk.IO
 
             for (int j = 0; j < classType.FieldCount; j++)
             {
-                EbxField fieldType = GetField(classType, classType.FieldIndex + j);
-                PropertyInfo fieldProp = GetProperty(objType, fieldType);
+                EbxField fieldType;
+                PropertyInfo fieldProp;
+                if (std != null)
+                {
+                    fieldType = GetField(classType, classType.FieldIndex + j);
+                    fieldProp = GetProperty(objType, fieldType);
+                }
+                else
+                {
+                    // for games without SharedTypeDescriptors
+                    fieldType = fieldTypes[classType.FieldIndex + j];
+                    fieldProp = objType.GetProperty(fieldType.Name);
+                }
 
                 IsReferenceAttribute attr = (fieldProp != null)
                     ? fieldProp.GetCustomAttribute<IsReferenceAttribute>()

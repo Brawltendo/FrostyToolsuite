@@ -151,7 +151,7 @@ namespace FrostySdk.Resources
             MipCount = reader.ReadByte();
             FirstMip = reader.ReadByte();
 
-            if (ProfilesLibrary.IsLoaded(ProfileVersion.Battlefield2042))
+            if (ProfilesLibrary.IsLoaded(ProfileVersion.NeedForSpeedUnbound, ProfileVersion.Battlefield2042))
             {
                 Unknown3[0] = reader.ReadUInt();
             }
@@ -192,7 +192,7 @@ namespace FrostySdk.Resources
                 Unknown3[0] = reader.ReadUInt();
             }
 
-            if (ProfilesLibrary.IsLoaded(ProfileVersion.Battlefield2042))
+            if (ProfilesLibrary.IsLoaded(ProfileVersion.NeedForSpeedUnbound, ProfileVersion.Battlefield2042))
             {
                 reader.ReadLong();
             }
@@ -249,7 +249,7 @@ namespace FrostySdk.Resources
                 writer.Write(FirstMip);
 
 
-                if (ProfilesLibrary.IsLoaded(ProfileVersion.Battlefield2042))
+                if (ProfilesLibrary.IsLoaded(ProfileVersion.NeedForSpeedUnbound, ProfileVersion.Battlefield2042))
                 {
                     writer.Write(Unknown3[0]);
                 }
@@ -288,6 +288,11 @@ namespace FrostySdk.Resources
                 if (ProfilesLibrary.IsLoaded(ProfileVersion.Battlefield5, ProfileVersion.StarWarsSquadrons))
                 {
                     writer.Write(Unknown3[0]);
+                }
+
+                if (ProfilesLibrary.IsLoaded(ProfileVersion.NeedForSpeedUnbound, ProfileVersion.Battlefield2042))
+                {
+                    writer.Write(0L);
                 }
 
                 if (m_version >= 11)
