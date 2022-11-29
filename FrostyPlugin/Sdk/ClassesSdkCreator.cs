@@ -354,7 +354,6 @@ namespace Frosty.Core.Sdk
             compilerParams.ReferencedAssemblies.Add("FrostySdk.dll");
 
             CompilerResults results = provider.CompileAssemblyFromFile(compilerParams, "temp.cs");
-            File.Delete("temp.cs");
 
 #if FROSTY_ALPHA || FROSTY_DEVELOPER
             if (results.Errors.Count > 0)
@@ -367,7 +366,11 @@ namespace Frosty.Core.Sdk
                     }
                 }
             }
+            else
 #endif
+            {
+                File.Delete("temp.cs");
+            }
         }
 
         private string WriteEnum(DbObject enumObj)
@@ -447,7 +450,7 @@ namespace Frosty.Core.Sdk
 
                 foreach (DbObject fieldObj in classObj.GetValue<DbObject>("fields"))
                 {
-                    sb.Append(WriteField(fieldObj));
+                    sb.Append(WriteField(fieldObj, classObj));
                     if (!isAssetClass && fieldObj.GetValue<string>("name").Equals("Name", StringComparison.OrdinalIgnoreCase) && type == EbxFieldType.Pointer)
                     {
                         EbxFieldType fieldType = (EbxFieldType)fieldObj.GetValue<int>("type");
@@ -529,6 +532,7 @@ namespace Frosty.Core.Sdk
 
                         if ((EbxFieldType)fieldObj.GetValue<int>("type") == EbxFieldType.Delegate || (EbxFieldType)fieldObj.GetValue<int>("type") == EbxFieldType.Function)
                         {
+                            sb.AppendLine(((z++ != 0) ? "&& " : "") + "false");
                             continue;
                         }
 
@@ -563,7 +567,7 @@ namespace Frosty.Core.Sdk
             return sb.ToString();
         }
 
-        private string WriteField(DbObject fieldObj)
+        private string WriteField(DbObject fieldObj, DbObject classObj)
         {
             StringBuilder sb = new StringBuilder();
             {
@@ -619,12 +623,47 @@ namespace Frosty.Core.Sdk
                 else
                 {
                     fieldType = GetFieldType(type, baseType);
-                    requiresDeclaration = (type == EbxFieldType.ResourceRef || type == EbxFieldType.BoxedValueRef || type == EbxFieldType.CString || type == EbxFieldType.FileRef || type == EbxFieldType.TypeRef || type == EbxFieldType.Struct);
+                    requiresDeclaration = (type == EbxFieldType.ResourceRef 
+                        || type == EbxFieldType.BoxedValueRef 
+                        || type == EbxFieldType.CString 
+                        || type == EbxFieldType.FileRef 
+                        || type == EbxFieldType.TypeRef 
+                        || type == EbxFieldType.Delegate
+                        || type == EbxFieldType.Struct);
                 }
 
                 if (fieldType == "")
                 {
                     return "";
+                }
+
+                // rename fields that have the same name as inherited ones
+                string parentName = classObj.GetValue<string>("parent");
+                if (parentName != "")
+                {
+                    DbObject parentObj = null;
+                    while (true)
+                    {
+                        parentObj = m_classList.Find<DbObject>((object o) =>
+                        {
+                            return (o as DbObject).GetValue<string>("name") == parentName;
+                        });
+                        if (parentObj == null)
+                        {
+                            break;
+                        }
+                        parentName = parentObj.GetValue<string>("parent");
+
+                        DbObject fieldMatch = parentObj.GetValue<DbObject>("fields").Find<DbObject>((object o) =>
+                        {
+                            return (o as DbObject).GetValue<string>("name") == fieldName;
+                        });
+                        if (fieldMatch != null)
+                        {
+                            fieldName += $"_{classObj.GetValue<string>("name")}";
+                            break;
+                        }
+                    }
                 }
 
                 if (meta != null && meta.HasValue("accessor"))
@@ -844,6 +883,7 @@ namespace Frosty.Core.Sdk
             {
                 case EbxFieldType.Boolean: return "bool";
                 case EbxFieldType.BoxedValueRef: return "BoxedValueRef";
+                case EbxFieldType.Delegate:
                 case EbxFieldType.CString: return "CString";
                 case EbxFieldType.FileRef: return "FileRef";
                 case EbxFieldType.Float32: return "float";
@@ -897,16 +937,23 @@ namespace Frosty.Core.Sdk
 
             public virtual void Read(MemoryReader reader)
             {
-                bool byteAlignFieldCount = (ProfilesLibrary.DataVersion == (int)ProfileVersion.NeedForSpeedRivals || ProfilesLibrary.DataVersion == (int)ProfileVersion.DragonAgeInquisition || ProfilesLibrary.DataVersion == (int)ProfileVersion.PlantsVsZombiesGardenWarfare);
+                bool byteAlignFieldCount = ProfilesLibrary.IsLoaded(ProfileVersion.NeedForSpeedRivals, ProfileVersion.DragonAgeInquisition, ProfileVersion.PlantsVsZombiesGardenWarfare);
 
                 Name = reader.ReadNullTerminatedString();
                 Flags = reader.ReadUShort();
-                if (ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa18 || ProfilesLibrary.DataVersion == (int)ProfileVersion.StarWarsBattlefrontII || ProfilesLibrary.DataVersion == (int)ProfileVersion.NeedForSpeedPayback || ProfilesLibrary.DataVersion == (int)ProfileVersion.Madden19 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa19 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Madden20 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Battlefield5 || ProfilesLibrary.DataVersion == (int)ProfileVersion.StarWarsSquadrons)
+                if (ProfilesLibrary.IsLoaded(ProfileVersion.Fifa18,
+                    ProfileVersion.StarWarsBattlefrontII,
+                    ProfileVersion.NeedForSpeedPayback,
+                    ProfileVersion.Madden19,
+                    ProfileVersion.Fifa19,
+                    ProfileVersion.Madden20,
+                    ProfileVersion.Battlefield5,
+                    ProfileVersion.StarWarsSquadrons))
                 {
                     Flags >>= 1;
                 }
                 Size = reader.ReadUInt();
-                if (ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa19 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Madden20)
+                if (ProfilesLibrary.IsLoaded(ProfileVersion.Fifa19, ProfileVersion.Madden20))
                 {
                     reader.Position -= 4;
                     Size = reader.ReadUShort();
@@ -917,7 +964,16 @@ namespace Frosty.Core.Sdk
                 Padding1 = reader.ReadUShort();
                 long nameSpaceOffset = reader.ReadLong();
 
-                if (ProfilesLibrary.DataVersion == (int)ProfileVersion.MassEffectAndromeda || ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa17 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa18 || ProfilesLibrary.DataVersion == (int)ProfileVersion.NeedForSpeedPayback || ProfilesLibrary.DataVersion == (int)ProfileVersion.Madden19 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa19 || ProfilesLibrary.DataVersion == (int)ProfileVersion.StarWarsBattlefrontII || ProfilesLibrary.DataVersion == (int)ProfileVersion.Madden20 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Battlefield5 || ProfilesLibrary.DataVersion == (int)ProfileVersion.StarWarsSquadrons)
+                if (ProfilesLibrary.IsLoaded(ProfileVersion.MassEffectAndromeda,
+                    ProfileVersion.Fifa17,
+                    ProfileVersion.Fifa18,
+                    ProfileVersion.NeedForSpeedPayback,
+                    ProfileVersion.Madden19,
+                    ProfileVersion.Fifa19,
+                    ProfileVersion.StarWarsBattlefrontII,
+                    ProfileVersion.Madden20,
+                    ProfileVersion.Battlefield5,
+                    ProfileVersion.StarWarsSquadrons))
                 {
                     ArrayTypeOffset = reader.ReadLong();
                 }
@@ -939,7 +995,7 @@ namespace Frosty.Core.Sdk
                 NameSpace = reader.ReadNullTerminatedString();
 
                 bool bReadFields = false;
-                if (ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa19 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Madden20)
+                if (ProfilesLibrary.IsLoaded(ProfileVersion.Fifa19, ProfileVersion.Madden20))
                 {
                     // FIFA19
                     ParentClass = offsets[0];
@@ -1002,7 +1058,12 @@ namespace Frosty.Core.Sdk
                         }
                     }
                 }
-                else if (ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa18 || ProfilesLibrary.DataVersion == (int)ProfileVersion.StarWarsBattlefrontII || ProfilesLibrary.DataVersion == (int)ProfileVersion.NeedForSpeedPayback || ProfilesLibrary.DataVersion == (int)ProfileVersion.Madden19 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Battlefield5 || ProfilesLibrary.DataVersion == (int)ProfileVersion.StarWarsSquadrons)
+                else if (ProfilesLibrary.IsLoaded(ProfileVersion.Fifa18,
+                    ProfileVersion.StarWarsBattlefrontII,
+                    ProfileVersion.NeedForSpeedPayback,
+                    ProfileVersion.Madden19,
+                    ProfileVersion.Battlefield5,
+                    ProfileVersion.StarWarsSquadrons))
                 {
                     // FIFA18
                     ParentClass = offsets[0];
@@ -1010,7 +1071,7 @@ namespace Frosty.Core.Sdk
                     else if (Type == 3 /* Class */) { reader.Position = offsets[1]; bReadFields = true; }
                     else if (Type == 8 /* Enum */) { reader.Position = offsets[0]; bReadFields = true; ParentClass = 0; }
                 }
-                else if (ProfilesLibrary.DataVersion == (int)ProfileVersion.MassEffectAndromeda || ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa17)
+                else if (ProfilesLibrary.IsLoaded(ProfileVersion.MassEffectAndromeda, ProfileVersion.Fifa17))
                 {
                     // MEA
                     ParentClass = offsets[0];
@@ -1018,7 +1079,11 @@ namespace Frosty.Core.Sdk
                     else if (Type == 3 /* Class */) { reader.Position = offsets[1]; bReadFields = true; }
                     else if (Type == 8 /* Enum */) { reader.Position = offsets[0]; bReadFields = true; ParentClass = 0; }
                 }
-                else if (ProfilesLibrary.DataVersion == (int)ProfileVersion.NeedForSpeedRivals || ProfilesLibrary.DataVersion == (int)ProfileVersion.DragonAgeInquisition || ProfilesLibrary.DataVersion == (int)ProfileVersion.NeedForSpeed || ProfilesLibrary.DataVersion == (int)ProfileVersion.PlantsVsZombiesGardenWarfare || ProfilesLibrary.DataVersion == (int)ProfileVersion.Battlefield4)
+                else if (ProfilesLibrary.IsLoaded(ProfileVersion.NeedForSpeedRivals,
+                    ProfileVersion.DragonAgeInquisition,
+                    ProfileVersion.NeedForSpeed,
+                    ProfileVersion.PlantsVsZombiesGardenWarfare,
+                    ProfileVersion.Battlefield4))
                 {
                     // DAI
                     ParentClass = offsets[0];
@@ -1679,7 +1744,8 @@ namespace Frosty.Core.Sdk
                     fieldObj.AddValue("flags", (int)field.Type);
                     if (ProfilesLibrary.IsLoaded(ProfileVersion.Anthem, ProfileVersion.PlantsVsZombiesBattleforNeighborville,
                         ProfileVersion.Fifa20, ProfileVersion.Fifa21, ProfileVersion.Madden22,
-                        ProfileVersion.Fifa22, ProfileVersion.Battlefield2042, ProfileVersion.Madden23))
+                        ProfileVersion.Fifa22, ProfileVersion.Battlefield2042, ProfileVersion.NeedForSpeedUnbound,
+                        ProfileVersion.Madden23))
                     {
                         fieldObj.AddValue("offset", (int)field.DataOffset);
                         fieldObj.AddValue("nameHash", field.NameHash);
@@ -1875,7 +1941,7 @@ namespace Frosty.Core.Sdk
                 Namespace = "Frosty.Core.Sdk.Anthem.";
             }
             // Bf2042
-            else if (ProfilesLibrary.IsLoaded(ProfileVersion.Madden22, ProfileVersion.Battlefield2042, ProfileVersion.Madden23))
+            else if (ProfilesLibrary.IsLoaded(ProfileVersion.Madden22, ProfileVersion.Battlefield2042, ProfileVersion.NeedForSpeedUnbound, ProfileVersion.Madden23))
             {
                 Namespace = "Frosty.Core.Sdk.Bf2042.";
             }

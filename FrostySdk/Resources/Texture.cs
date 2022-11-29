@@ -148,8 +148,16 @@ namespace FrostySdk.Resources
                 Unknown3[0] = reader.ReadUShort();
             }
 
-            MipCount = reader.ReadByte();
-            FirstMip = reader.ReadByte();
+            if (ProfilesLibrary.IsLoaded(ProfileVersion.NeedForSpeedUnbound))
+            {
+                FirstMip = reader.ReadByte();
+                MipCount = reader.ReadByte();
+            }
+            else
+            {
+                MipCount = reader.ReadByte();
+                FirstMip = reader.ReadByte();
+            }
 
             if (ProfilesLibrary.IsLoaded(ProfileVersion.NeedForSpeedUnbound, ProfileVersion.Battlefield2042))
             {
